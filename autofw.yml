@@ -1,0 +1,46 @@
+---
+- name: Block IP address
+  hosts:
+    - ubuntu_desktop
+    - centos_desktop
+  become: true
+
+  vars:
+    ubuntu_block: 192.168.56.120
+    centos_block: 192.168.56.118
+
+  tasks:
+    - name: Block IP address (UBUNTU)
+      when: "'ubuntu_desktop' in group_names"
+      ufw:
+        rule: deny
+        proto: any
+        from_ip: "{{ ubuntu_block }}"
+
+    - name: Block IP address (CENTOS)
+      when: "'centos_desktop' in group_names"
+      firewalld:
+        permanent: true
+        state: enabled
+        zone: public
+        source: "{{ centos_block }}"
+
+    - name: Check Status on Ubuntu
+      when: "'ubuntu_desktop' in group_names"
+      shell: sudo ufw status
+      register: ubuntu_fw_stat
+
+    - name: Check Status on CentOS
+      when: "'centos_desktop' in group_names"
+      shell: sudo firewall-cmd --zone=public --list-all
+      register: centos_fw_stat
+
+    - name: Print firewall status on Ubuntu
+      when: "'ubuntu_desktop' in group_names"
+      debug:
+        var: ubuntu_fw_stat.stdout_lines
+
+    - name: Print firewall status on CentOS
+      when: "'centos_desktop' in group_names"
+      debug:
+        var: centos_fw_stat.stdout_lines
